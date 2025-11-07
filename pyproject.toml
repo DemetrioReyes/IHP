@@ -12,7 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13"
 ]
 dependencies = [
-  "gdsfactory~=9.20.0",
+  "gdsfactory~=9.20.7",
   "gplugins[sax]~=1.4.2",
   "doroutes>=0.2.0"
 ]
@@ -36,7 +36,11 @@ dev = [
 docs = ["autodoc_pydantic", "jupytext", "jupyter-book==1.0.3"]
 
 [tool.codespell]
-ignore-words-list = "te,fpr,nd,donot,schem"
+ignore-words-list = "te,fpr,nd,donot,schem,contnet,Contnet"
+skip = "*.lock,*.svg,*.gds,*.oas"
+
+[tool.gdsfactoryplus]
+name = "ihp"
 
 [tool.gdsfactoryplus.pdk]
 name = "ihp"

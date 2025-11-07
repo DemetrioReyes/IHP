@@ -20,6 +20,7 @@ class Path:
     gds = module / "gds"
 
     lyp = module / "klayout" / "tech" / "layers.lyp"
+    lyp_yaml = module / "layers.yaml"
     lyt = module / "klayout" / "tech" / "tech.lyt"
     layers_yaml = module / "layers.yaml"
     tech = module / "klayout" / "tech"

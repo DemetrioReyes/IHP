@@ -543,3 +543,6 @@ routing_strategies = dict(
     route_astar=route_astar,
     route_astar_metal=route_astar_metal,
 )
+
+if __name__ == "__main__":
+    LAYER_VIEWS.to_yaml(PATH.lyp_yaml)
