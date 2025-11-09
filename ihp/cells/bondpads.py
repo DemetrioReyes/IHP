@@ -5,30 +5,27 @@ from typing import Literal
 
 import gdsfactory as gf
 from gdsfactory import Component
+from gdsfactory.typings import (
+    LayerSpec,
+)
 
 
 @gf.cell
 def bondpad(
     shape: Literal["octagon", "square", "circle"] = "octagon",
-    stack_metals: bool = True,
-    flip_chip: bool = False,
-    diameter: float = 68.0,
+    diameter: float = 80.0,
     top_metal: str = "TopMetal2drawing",
-    bottom_metal: str = "Metal1",
-    passivation_open: str = "dfpaddrawing",
-    ubm_layer=(155, 0),
+    bbox_layers: tuple[LayerSpec, ...] | None = ("Passivpillar", "dfpaddrawing"),
+    bbox_offsets: tuple[float, ...] | None = (-2.1, 0),
 ) -> Component:
     """Create a bondpad for wire bonding or flip-chip connection.
 
     Args:
         shape: Shape of the bondpad ("octagon", "square", or "circle").
-        stack_metals: Stack all metal layers from bottom to top.
-        flip_chip: Enable flip-chip configuration.
         diameter: Diameter or size of the bondpad in micrometers.
         top_metal: Top metal layer name.
-        bottom_metal: Bottom metal layer name.
-        passivation_open: Passivation opening layer name.
-        ubm_layer: Under-bump metallization layer.
+        bbox_layers: Additional layers for passivation openings.
+        bbox_offsets: Offsets for each additional layer.
 
     Returns:
         Component with bondpad layout.
@@ -36,8 +33,7 @@ def bondpad(
     c = Component()
 
     # Grid alignment
-    grid = 0.01
-    d = round(diameter / grid) * grid
+    d = diameter
 
     # Create the main pad shape
     if shape == "square":
@@ -67,42 +63,25 @@ def bondpad(
     else:
         raise ValueError(f"Unknown shape: {shape}")
 
-    # Add passivation opening
-    if shape == "square":
-        opening = gf.components.rectangle(
-            size=(d * 0.85, d * 0.85),
-            layer=passivation_open,
-            centered=True,
-        )
-        c.add_ref(opening)
-    elif shape == "octagon":
-        scale = 0.85
-        side_length = gf.snap.snap_to_grid2x(scale * d / (1 + math.sqrt(2)))
-        opening = gf.c.octagon(side_length=side_length, layer=passivation_open)
-        c.add_ref(opening)
-    elif shape == "circle":
-        opening = gf.components.circle(
-            radius=d / 2 * 0.85,
-            layer=passivation_open,
-        )
-        c.add_ref(opening)
-
-    # Add flip-chip bumps if requested
-    if flip_chip:
-        # Add under-bump metallization (UBM)
-        if shape == "circle":
-            ubm = gf.components.circle(
-                radius=d / 2 * 0.7,
-                layer=ubm_layer,
-            )
-            c.add_ref(ubm)
-        else:
-            ubm = gf.components.rectangle(
-                size=(d * 0.7, d * 0.7),
-                layer=ubm_layer,
+    # Stack additional metal layers if required
+    for layer, offset in zip(bbox_layers or [], bbox_offsets or []):
+        if shape == "square":
+            opening = gf.components.rectangle(
+                size=(d + offset, d + offset),
+                layer=layer,
                 centered=True,
             )
-            c.add_ref(ubm)
+            c.add_ref(opening)
+        elif shape == "octagon":
+            side_length = gf.snap.snap_to_grid2x(offset + d / (1 + math.sqrt(2)))
+            opening = gf.c.octagon(side_length=side_length, layer=layer)
+            c.add_ref(opening)
+        elif shape == "circle":
+            opening = gf.components.circle(
+                radius=d / 2 + offset / 2,
+                layer=layer,
+            )
+            c.add_ref(opening)
 
     # Add port at the center
     c.add_port(
@@ -117,10 +96,7 @@ def bondpad(
     # Add metadata
     c.info["shape"] = shape
     c.info["diameter"] = diameter
-    c.info["stack_metals"] = stack_metals
-    c.info["flip_chip"] = flip_chip
     c.info["top_metal"] = top_metal
-    c.info["bottom_metal"] = bottom_metal
     return c
 
 
@@ -173,13 +149,17 @@ def bondpad_array(
 
 
 if __name__ == "__main__":
-    from ihp import cells
+    from gdsfactory.difftest import xor
+
+    from ihp import PDK, cells
+
+    PDK.activate()
 
     # Test the components
-    c0 = bondpad(shape="octagon")
-    c1 = cells.bondpad()
-
-    c = gf.grid([c0, c1], spacing=100)
+    c0 = cells.bondpad()  # original
+    c1 = bondpad(shape="octagon")  # new
+    # c = gf.grid([c0, c1], spacing=100)
+    c = xor(c0, c1)
     c.show()
 
     # c2 = bondpad(shape="square", flip_chip=True)
